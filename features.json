@@ -1,0 +1,319 @@
+{
+  "features": [
+    {
+      "id": "F001",
+      "description": "Plugin skeleton with load guard",
+      "sprint_id": 1,
+      "priority": 1,
+      "files": ["plugin/focusmode.lua"],
+      "passes": false,
+      "blocked": false,
+      "ready_for_qa": false,
+      "test_steps": [
+        "Open nvim with minimal-init, verify vim.g.loaded_focusmode == true",
+        "Verify :FocusmodeSetup command exists and prints warning",
+        "Source plugin file twice, verify no double-load errors"
+      ]
+    },
+    {
+      "id": "F002",
+      "description": "Config module with full schema",
+      "sprint_id": 1,
+      "priority": 2,
+      "files": ["lua/focusmode/config.lua"],
+      "passes": false,
+      "blocked": false,
+      "ready_for_qa": false,
+      "test_steps": [
+        "require('focusmode.config').setup({}) applies defaults",
+        "setup({focus_duration = 50}) overrides focus_duration to 50",
+        "setup({modes = {custom = {focus = 10, break = 2}}}) adds custom mode, preserves defaults",
+        "config.options.timer_ui.position equals 'top_right' with empty config"
+      ]
+    },
+    {
+      "id": "F003",
+      "description": "Focus mode definitions",
+      "sprint_id": 1,
+      "priority": 3,
+      "files": ["lua/focusmode/modes.lua"],
+      "passes": false,
+      "blocked": false,
+      "ready_for_qa": false,
+      "test_steps": [
+        "modes.get('pomodoro') returns {focus=25, break=5, long_break=15, long_break_interval=4}",
+        "modes.get('nonexistent') falls back to default mode settings",
+        "modes.list() returns all mode names including user-defined ones",
+        "modes.validate({focus=10}) returns false with missing fields error"
+      ]
+    },
+    {
+      "id": "F004",
+      "description": "Timer engine with leak-safe lifecycle",
+      "sprint_id": 1,
+      "priority": 4,
+      "files": ["lua/focusmode/timer.lua"],
+      "passes": false,
+      "blocked": false,
+      "ready_for_qa": false,
+      "test_steps": [
+        "Start a 3-second timer, verify on_tick fires with decreasing values (3,2,1)",
+        "Verify on_complete fires after countdown reaches 0",
+        "Call timer.pause() mid-countdown, verify ticks stop",
+        "Call timer.resume(), verify ticks resume from paused value",
+        "Call timer.stop(), verify is_running() returns false",
+        "Start timer twice without stopping, verify first timer is cleaned up",
+        "Headless nvim with timer start + stop exits cleanly within 5 seconds"
+      ]
+    },
+    {
+      "id": "F005",
+      "description": "JSON persistence module",
+      "sprint_id": 1,
+      "priority": 5,
+      "files": ["lua/focusmode/persist.lua"],
+      "passes": false,
+      "blocked": false,
+      "ready_for_qa": false,
+      "test_steps": [
+        "persist.load() on fresh install creates default state",
+        "persist.record_session('pomodoro', 25, '14:00', '14:25') appends session",
+        "persist.save() then persist.load() round-trips correctly",
+        "Multiple sessions on same day updates daily_log sum correctly",
+        "3 consecutive days produces streak.current == 3",
+        "Gap day resets streak.current to 0 but preserves longest"
+      ]
+    },
+    {
+      "id": "F006",
+      "description": "Init module with setup() and commands",
+      "sprint_id": 1,
+      "priority": 6,
+      "files": ["lua/focusmode/init.lua"],
+      "passes": false,
+      "blocked": false,
+      "ready_for_qa": false,
+      "test_steps": [
+        "require('focusmode').setup({}) registers all commands",
+        ":FocusStatus prints idle state",
+        "require('focusmode').status() returns table with phase='idle'"
+      ]
+    },
+    {
+      "id": "F007",
+      "description": "Highlight groups",
+      "sprint_id": 2,
+      "priority": 1,
+      "files": ["lua/focusmode/hl.lua"],
+      "passes": false,
+      "blocked": false,
+      "ready_for_qa": false,
+      "test_steps": [
+        "hl.setup() creates all highlight groups in namespace",
+        "Verify namespace isolation via nvim_get_hl(hl.ns, {name='FocusTimerText'})"
+      ]
+    },
+    {
+      "id": "F008",
+      "description": "Floating corner timer",
+      "sprint_id": 2,
+      "priority": 2,
+      "files": ["lua/focusmode/ui.lua"],
+      "passes": false,
+      "blocked": false,
+      "ready_for_qa": false,
+      "test_steps": [
+        "ui.open_timer() creates floating window in top-right corner",
+        "Window is non-focusable (focusable=false in win config)",
+        "ui.update_timer({phase='focus', remaining=1500, mode='pomodoro', session=1, total_sessions=4}) shows '25:00'",
+        "ui.close_timer() removes window and buffer",
+        "Timer respects timer_ui.position config for all 4 corners"
+      ]
+    },
+    {
+      "id": "F009",
+      "description": "Toast notifications",
+      "sprint_id": 2,
+      "priority": 3,
+      "files": ["lua/focusmode/ui.lua"],
+      "passes": false,
+      "blocked": false,
+      "ready_for_qa": false,
+      "test_steps": [
+        "ui.show_toast('Focus complete!', 'focus_complete') creates toast window",
+        "Toast window is non-focusable",
+        "Toast auto-dismisses after toast.duration_ms"
+      ]
+    },
+    {
+      "id": "F010",
+      "description": "Session state machine",
+      "sprint_id": 2,
+      "priority": 4,
+      "files": ["lua/focusmode/session.lua"],
+      "passes": false,
+      "blocked": false,
+      "ready_for_qa": false,
+      "test_steps": [
+        "session.start('pomodoro') sets state to {phase='focus', mode='pomodoro'}",
+        "session.pause() pauses timer, state shows paused",
+        "session.resume() resumes timer",
+        "session.stop() returns to idle, timer stopped",
+        "session.skip() during focus jumps to break",
+        "session.get_state() returns expected fields"
+      ]
+    },
+    {
+      "id": "F011",
+      "description": "Keybind blocking",
+      "sprint_id": 3,
+      "priority": 1,
+      "files": ["lua/focusmode/keybind.lua"],
+      "passes": false,
+      "blocked": false,
+      "ready_for_qa": false,
+      "test_steps": [
+        "Configure blocked_keys, block() makes them no-ops",
+        "unblock() restores original mappings",
+        "is_blocking() returns correct state"
+      ]
+    },
+    {
+      "id": "F012",
+      "description": "Do Not Disturb mode",
+      "sprint_id": 3,
+      "priority": 2,
+      "files": ["lua/focusmode/dnd.lua"],
+      "passes": false,
+      "blocked": false,
+      "ready_for_qa": false,
+      "test_steps": [
+        "dnd.enable() suppresses vim.notify calls",
+        "dnd.disable() restores vim.notify and flushes queue",
+        "dnd.is_active() returns correct state"
+      ]
+    },
+    {
+      "id": "F013",
+      "description": "Achievement-tracker integration",
+      "sprint_id": 3,
+      "priority": 3,
+      "files": ["lua/focusmode/integrations.lua"],
+      "passes": false,
+      "blocked": false,
+      "ready_for_qa": false,
+      "test_steps": [
+        "Without achievement-tracker installed: award_xp() is no-op, no errors",
+        "earn_daily_achievement() is no-op without tracker, no errors",
+        "play_sound() with bell=true outputs terminal bell character"
+      ]
+    },
+    {
+      "id": "F014",
+      "description": "Sound/bell on transitions",
+      "sprint_id": 3,
+      "priority": 4,
+      "files": ["lua/focusmode/integrations.lua"],
+      "passes": false,
+      "blocked": false,
+      "ready_for_qa": false,
+      "test_steps": [
+        "play_sound() with sound.enabled=false is no-op",
+        "play_sound() with sound.bell=true writes bell char",
+        "play_sound() with sound.command executes shell command"
+      ]
+    },
+    {
+      "id": "F015",
+      "description": "Auto-pause on focus lost",
+      "sprint_id": 3,
+      "priority": 5,
+      "files": ["lua/focusmode/session.lua"],
+      "passes": false,
+      "blocked": false,
+      "ready_for_qa": false,
+      "test_steps": [
+        "With auto_pause.on_focus_lost=true, FocusLost event pauses timer",
+        "FocusGained event resumes timer",
+        "With auto_pause.enabled=false, FocusLost does not pause"
+      ]
+    },
+    {
+      "id": "F016",
+      "description": "Statistics computation",
+      "sprint_id": 4,
+      "priority": 1,
+      "files": ["lua/focusmode/stats.lua"],
+      "passes": false,
+      "blocked": false,
+      "ready_for_qa": false,
+      "test_steps": [
+        "stats.today() returns correct minutes and session count",
+        "stats.streak() with consecutive days returns correct current/longest",
+        "stats.goal_progress() computes percentages correctly",
+        "stats.by_mode() returns per-mode breakdown"
+      ]
+    },
+    {
+      "id": "F017",
+      "description": "Statistics dashboard",
+      "sprint_id": 4,
+      "priority": 2,
+      "files": ["lua/focusmode/dashboard.lua"],
+      "passes": false,
+      "blocked": false,
+      "ready_for_qa": false,
+      "test_steps": [
+        "dashboard.open() creates centered floating window",
+        "Dashboard shows today, week, streaks, by-mode sections",
+        "Press q to close dashboard",
+        "dashboard.toggle() opens and closes"
+      ]
+    },
+    {
+      "id": "F018",
+      "description": "Lualine component",
+      "sprint_id": 4,
+      "priority": 3,
+      "files": ["lua/focusmode/integrations.lua"],
+      "passes": false,
+      "blocked": false,
+      "ready_for_qa": false,
+      "test_steps": [
+        "lualine_component() returns callable function",
+        "Function returns empty string when idle",
+        "Function is safe to call before setup()"
+      ]
+    },
+    {
+      "id": "F019",
+      "description": "Daily/weekly goal tracking",
+      "sprint_id": 4,
+      "priority": 4,
+      "files": ["lua/focusmode/stats.lua", "lua/focusmode/ui.lua"],
+      "passes": false,
+      "blocked": false,
+      "ready_for_qa": false,
+      "test_steps": [
+        "goal_progress() returns daily_pct and weekly_pct",
+        "Toast shown when daily goal reached"
+      ]
+    },
+    {
+      "id": "F020",
+      "description": "Edge case polish and idempotency",
+      "sprint_id": 4,
+      "priority": 5,
+      "files": ["all"],
+      "passes": false,
+      "blocked": false,
+      "ready_for_qa": false,
+      "test_steps": [
+        "VimLeavePre cleans up all timers",
+        "setup() twice is idempotent",
+        "Rapid toggle 10 times produces no orphaned windows or timers",
+        "Full headless session exits cleanly"
+      ]
+    }
+  ]
+}

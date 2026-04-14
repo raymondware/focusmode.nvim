@@ -1,0 +1,238 @@
+{
+  "plugin_name": "focusmode",
+  "modules": [
+    {
+      "file": "lua/focusmode/config.lua",
+      "responsibility": "Config schema, defaults, tbl_deep_extend merge",
+      "public_api": [
+        "M.defaults",
+        "M.options",
+        "M.setup(opts)",
+        "M.get_mode(name) -> table"
+      ],
+      "dependencies": [],
+      "notes": "No deps. First to load. All user-facing options defined here."
+    },
+    {
+      "file": "lua/focusmode/hl.lua",
+      "responsibility": "Namespace-isolated highlight groups",
+      "public_api": [
+        "M.ns",
+        "M.setup()"
+      ],
+      "dependencies": [],
+      "notes": "Pulls accent colors from user's active colorscheme. Same mix/lighten pattern as achievement-tracker."
+    },
+    {
+      "file": "lua/focusmode/modes.lua",
+      "responsibility": "Focus mode definitions and resolution",
+      "public_api": [
+        "M.get(name) -> {focus, break, long_break, long_break_interval}",
+        "M.list() -> string[]",
+        "M.validate(mode_table) -> ok, err"
+      ],
+      "dependencies": ["config"],
+      "notes": "Resolves mode name to duration settings. Falls back to config defaults."
+    },
+    {
+      "file": "lua/focusmode/persist.lua",
+      "responsibility": "JSON persistence to stdpath('data')",
+      "public_api": [
+        "M.load()",
+        "M.save()",
+        "M.record_session(mode, minutes, started_at, ended_at)",
+        "M.get_sessions(filter?) -> table[]",
+        "M.get_daily_log() -> table",
+        "M.get_streaks() -> table",
+        "M.get_lifetime() -> {minutes, sessions}",
+        "M.reset()"
+      ],
+      "dependencies": ["config"],
+      "notes": "Stores session history, daily_log, streaks. Same load/save pattern as achievement-tracker state.lua."
+    },
+    {
+      "file": "lua/focusmode/timer.lua",
+      "responsibility": "Sole owner of all libuv timer handles",
+      "public_api": [
+        "M.start(duration_seconds, on_tick, on_complete)",
+        "M.pause()",
+        "M.resume()",
+        "M.stop()",
+        "M.stop_all()",
+        "M.get_remaining() -> number|nil",
+        "M.is_running() -> bool",
+        "M.is_paused() -> bool",
+        "M.cleanup()"
+      ],
+      "dependencies": [],
+      "notes": "CRITICAL module. No other module creates timers. VimLeavePre autocmd calls stop_all(). All callbacks use vim.schedule_wrap()."
+    },
+    {
+      "file": "lua/focusmode/dnd.lua",
+      "responsibility": "Do Not Disturb - suppress vim.notify during focus",
+      "public_api": [
+        "M.enable()",
+        "M.disable()",
+        "M.is_active() -> bool"
+      ],
+      "dependencies": ["config"],
+      "notes": "Stores original vim.notify, replaces with no-op. Queues suppressed notifications for delivery on disable."
+    },
+    {
+      "file": "lua/focusmode/keybind.lua",
+      "responsibility": "Block distracting keybinds during focus",
+      "public_api": [
+        "M.block()",
+        "M.unblock()",
+        "M.is_blocking() -> bool"
+      ],
+      "dependencies": ["config"],
+      "notes": "Saves existing mappings via maparg, restores on unblock."
+    },
+    {
+      "file": "lua/focusmode/stats.lua",
+      "responsibility": "Statistics computation from session history",
+      "public_api": [
+        "M.today() -> table",
+        "M.this_week() -> table",
+        "M.this_month() -> table",
+        "M.streak() -> {current, longest}",
+        "M.goal_progress() -> table",
+        "M.by_mode() -> table"
+      ],
+      "dependencies": ["persist", "config"],
+      "notes": "Pure computation. Takes raw data from persist, returns aggregated stats."
+    },
+    {
+      "file": "lua/focusmode/integrations.lua",
+      "responsibility": "Optional integrations: achievement-tracker, lualine, sound",
+      "public_api": [
+        "M.award_xp(minutes)",
+        "M.earn_daily_achievement()",
+        "M.lualine_component() -> function",
+        "M.play_sound()"
+      ],
+      "dependencies": ["config"],
+      "notes": "All integrations pcall-guarded. Lazy-requires session to avoid circular deps."
+    },
+    {
+      "file": "lua/focusmode/ui.lua",
+      "responsibility": "Floating corner timer and toast notifications",
+      "public_api": [
+        "M.open_timer()",
+        "M.close_timer()",
+        "M.update_timer(state)",
+        "M.show_toast(message, type)",
+        "M.is_timer_open() -> bool"
+      ],
+      "dependencies": ["hl", "config"],
+      "notes": "Does NOT depend on session. Receives state via callbacks. Owns all buffers/windows for timer display and toasts."
+    },
+    {
+      "file": "lua/focusmode/session.lua",
+      "responsibility": "Session state machine: idle/focus/break/paused",
+      "public_api": [
+        "M.start(mode_name?)",
+        "M.stop()",
+        "M.pause()",
+        "M.resume()",
+        "M.toggle()",
+        "M.skip()",
+        "M.get_state() -> table",
+        "M.on_phase_change(callback)",
+        "M.on_tick(callback)"
+      ],
+      "dependencies": ["timer", "config", "persist", "integrations", "dnd", "keybind", "ui", "modes"],
+      "notes": "The brain. Orchestrates focus/break lifecycle. Tracks session count, fires callbacks."
+    },
+    {
+      "file": "lua/focusmode/dashboard.lua",
+      "responsibility": "Statistics dashboard floating window",
+      "public_api": [
+        "M.open()",
+        "M.close()",
+        "M.toggle()",
+        "M.is_open() -> bool"
+      ],
+      "dependencies": ["stats", "persist", "config", "hl"],
+      "notes": "Full-screen floating window with dim overlay. Same pattern as achievement-tracker ui.lua."
+    },
+    {
+      "file": "lua/focusmode/init.lua",
+      "responsibility": "Public API and setup()",
+      "public_api": [
+        "M.setup(opts)",
+        "M.start(mode?)",
+        "M.stop()",
+        "M.pause()",
+        "M.resume()",
+        "M.toggle()",
+        "M.skip()",
+        "M.dashboard()",
+        "M.status() -> table",
+        "M.lualine() -> function"
+      ],
+      "dependencies": ["config", "session", "timer", "ui", "dashboard", "integrations", "persist"],
+      "notes": "Entry point for user configuration. Registers all user commands inside setup()."
+    }
+  ],
+  "extmark_namespaces": {
+    "FocusMode": "Timer UI, toast highlights, dashboard rendering"
+  },
+  "config_schema": {
+    "focus_duration": { "type": "number", "default": 25, "description": "Focus duration in minutes" },
+    "break_duration": { "type": "number", "default": 5, "description": "Break duration in minutes" },
+    "long_break_duration": { "type": "number", "default": 15, "description": "Long break duration in minutes" },
+    "long_break_interval": { "type": "number", "default": 4, "description": "Focus sessions before long break" },
+    "auto_start_break": { "type": "boolean", "default": true, "description": "Auto-start break after focus ends" },
+    "auto_start_focus": { "type": "boolean", "default": false, "description": "Auto-start focus after break ends" },
+    "default_mode": { "type": "string", "default": "pomodoro", "description": "Default focus mode name" },
+    "modes": { "type": "table", "default": "{pomodoro, deep_work, review, learning}", "description": "Named focus modes with custom durations" },
+    "timer_ui": { "type": "table", "default": "{enabled=true, position='top_right', ...}", "description": "Floating timer display settings" },
+    "toast": { "type": "table", "default": "{enabled=true, duration_ms=4000, ...}", "description": "Toast notification settings" },
+    "sound": { "type": "table", "default": "{enabled=false, bell=true, ...}", "description": "Sound/bell settings" },
+    "keybind_blocking": { "type": "table", "default": "{enabled=false, ...}", "description": "Keybind blocking during focus" },
+    "auto_pause": { "type": "table", "default": "{enabled=false, ...}", "description": "Auto-pause settings" },
+    "goals": { "type": "table", "default": "{daily_minutes=120, weekly_minutes=600}", "description": "Deep work goals" },
+    "achievements": { "type": "table", "default": "{enabled=true, xp_per_focus_minute=4, ...}", "description": "Achievement-tracker integration" },
+    "dnd": { "type": "table", "default": "{enabled=false, ...}", "description": "Do Not Disturb settings" },
+    "data_dir": { "type": "string", "default": "stdpath('data')/focusmode", "description": "Persistence directory" }
+  },
+  "user_commands": [
+    { "name": "FocusStart", "description": "Start a focus session, optional mode arg" },
+    { "name": "FocusStop", "description": "Stop current session" },
+    { "name": "FocusPause", "description": "Pause current session" },
+    { "name": "FocusResume", "description": "Resume paused session" },
+    { "name": "FocusToggle", "description": "Smart toggle: idle->start, running->pause, paused->resume" },
+    { "name": "FocusSkip", "description": "Skip to next phase" },
+    { "name": "FocusDashboard", "description": "Open statistics dashboard" },
+    { "name": "FocusStatus", "description": "Print current state" },
+    { "name": "FocusReset", "description": "Reset all persisted data" }
+  ],
+  "highlight_groups": {
+    "FocusTimerBg": { "description": "Timer window background" },
+    "FocusTimerText": { "description": "MM:SS countdown text" },
+    "FocusTimerLabel": { "description": "Mode name label" },
+    "FocusTimerSession": { "description": "Session count indicator" },
+    "FocusTimerBarOn": { "description": "Progress bar filled portion" },
+    "FocusTimerBarOff": { "description": "Progress bar empty portion" },
+    "FocusPhaseFocus": { "description": "FOCUS phase label" },
+    "FocusPhaseBreak": { "description": "BREAK phase label" },
+    "FocusPhasePaused": { "description": "PAUSED phase label" },
+    "FocusToastTitle": { "description": "Toast header text" },
+    "FocusToastBody": { "description": "Toast message body" },
+    "FocusToastIcon": { "description": "Toast icon" },
+    "FocusDashTitle": { "description": "Dashboard title" },
+    "FocusDashHeading": { "description": "Dashboard section headings" },
+    "FocusDashSep": { "description": "Dashboard separator lines" },
+    "FocusDashStatVal": { "description": "Dashboard statistic values" },
+    "FocusDashStatLabel": { "description": "Dashboard statistic labels" },
+    "FocusDashBarOn": { "description": "Goal progress bar filled" },
+    "FocusDashBarOff": { "description": "Goal progress bar empty" },
+    "FocusDashStreak": { "description": "Streak count" },
+    "FocusDashGoalMet": { "description": "Goal achieved indicator" },
+    "FocusDashGoalUnmet": { "description": "Goal not yet met indicator" },
+    "FocusDim": { "description": "Dimming overlay behind dashboard" }
+  },
+  "dependency_order": ["config", "hl", "modes", "persist", "timer", "dnd", "keybind", "stats", "integrations", "ui", "session", "dashboard", "init"]
+}
