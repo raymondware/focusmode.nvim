@@ -1,0 +1,13 @@
+*.swp
+*.swo
+*~
+.DS_Store
+.luarc.json
+.luacache
+luac.out
+
+# Build/planning artifacts
+architecture.json
+features.json
+harness-state.json
+PROGRESS.md
