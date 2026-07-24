@@ -13,12 +13,15 @@ integrations.earn_daily_achievement()
 config.setup({ achievements = { enabled = false } })
 integrations.award_xp(25)
 
--- Test 4: lualine_component returns callable
+-- Test 4: lualine_component returns a lualine component table
 local component = integrations.lualine_component()
-assert(type(component) == "function", "lualine_component should return a function")
+assert(type(component) == "table", "lualine_component should return a component table")
+assert(type(component[1]) == "function", "lualine component table should expose a callable at index 1")
+assert(type(component.color) == "function", "lualine component should expose a color callback")
+assert(type(component.cond) == "function", "lualine component should expose a cond callback")
 
--- Test 5: Component returns string
-local result = component()
-assert(type(result) == "string", "Component should return a string")
+-- Test 5: Component callable returns string
+local result = component[1]()
+assert(type(result) == "string", "Component callable should return a string")
 
 print("PASS: F013 achievement-tracker integration")

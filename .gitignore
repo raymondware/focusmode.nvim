@@ -5,6 +5,7 @@
 .luarc.json
 .luacache
 luac.out
+__pycache__/
 
 # Build/planning artifacts
 architecture.json
