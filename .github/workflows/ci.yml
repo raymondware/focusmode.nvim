@@ -1,0 +1,35 @@
+name: focusmode launch evidence
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  headless-tests:
+    name: Neovim headless test sweep
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install stable Neovim
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L https://github.com/neovim/neovim/releases/download/stable/nvim-linux-x86_64.tar.gz -o /tmp/nvim-linux-x86_64.tar.gz
+          tar -C /tmp -xzf /tmp/nvim-linux-x86_64.tar.gz
+          echo "/tmp/nvim-linux-x86_64/bin" >> "$GITHUB_PATH"
+
+      - name: Show Neovim version
+        run: nvim --version | head -1
+
+      - name: Run smoke check
+        run: ./init-test.sh
+
+      - name: Run full headless test sweep
+        run: python3 scripts/run-headless-tests.py
+
+      - name: Check whitespace
+        run: git diff --check

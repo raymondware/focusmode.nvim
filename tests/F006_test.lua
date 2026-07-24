@@ -32,10 +32,13 @@ fm.setup({})
 commands = vim.api.nvim_get_commands({})
 assert(commands["FocusStart"] ~= nil, "Commands should still exist after second setup")
 
--- Test 6: lualine returns a callable
+-- Test 6: lualine returns a lualine component table
 local component = fm.lualine()
-assert(type(component) == "function", "lualine() should return a function")
-local result = component()
-assert(type(result) == "string", "lualine component should return a string")
+assert(type(component) == "table", "lualine() should return a component table")
+assert(type(component[1]) == "function", "lualine component table should expose a callable at index 1")
+assert(type(component.color) == "function", "lualine component should expose a color callback")
+assert(type(component.cond) == "function", "lualine component should expose a cond callback")
+local result = component[1]()
+assert(type(result) == "string", "lualine component callable should return a string")
 
 print("PASS: F006 init module with setup() and commands")
